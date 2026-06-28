@@ -65,9 +65,11 @@ export default function App() {
   };
 
   // Auth Success Handler
-  const handleAuthSuccess = (loggedUser) => {
+  const handleAuthSuccess = (loggedUser, isLogin) => {
+    if (isLogin) {
+      navigate('/dashboard', { replace: true });
+    }
     setUser(loggedUser);
-    navigate('/dashboard', { replace: true });
   };
 
   // Logout Handler

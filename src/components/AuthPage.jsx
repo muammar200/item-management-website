@@ -72,11 +72,11 @@ export default function AuthPage({ isLogin, onAuthSuccess, showToast }) {
         const response = await api.login(email.trim(), password);
         showToast('Login berhasil! Selamat datang kembali.', 'success');
         localStorage.setItem('item_mgmt_token', response.data.token);
-        onAuthSuccess(response.data.user);
+        onAuthSuccess(response.data.user, true);
       } else {
         const response = await api.register(name.trim(), email.trim(), password, passwordConfirmation);
         showToast('Registrasi berhasil! Akun Anda telah dibuat.', 'success');
-        onAuthSuccess(response.data.user);
+        onAuthSuccess(response.data.user, false);
       }
     } catch (err) {
       const errMsg = err.message || 'Terjadi kesalahan sistem.';
@@ -134,8 +134,8 @@ export default function AuthPage({ isLogin, onAuthSuccess, showToast }) {
                 <input
                   type={isLogin ? 'email' : 'text'}
                   placeholder={isLogin ? 'nama@email.com' : 'Masukkan nama lengkap'}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  value={isLogin ? email : name}
+                  onChange={(e) => isLogin ? setEmail(e.target.value) : setName(e.target.value)}
                   className={`w-full pl-11 pr-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm text-gray-800 transition-all ${errors.name ? 'border-rose-500 focus:ring-rose-500' : 'border-gray-300'
                     }`}
                 />
