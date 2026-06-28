@@ -1,0 +1,6 @@
+{
+  "name": "Item Management Website",
+  "description": "A web application for managing items, categories, and users with a polished dashboard and CRUD actions.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
