@@ -21,23 +21,27 @@ axiosInstance.interceptors.request.use(
 );
 
 axiosInstance.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   async (error) => {
     if (axios.isCancel(error)) {
       return Promise.reject(error);
     }
 
-    const originalRequest = error.config;
+    const originalRequest = error.config || {};
+    const status = error.response?.status;
+    const url = originalRequest.url || '';
+    const isAuthEndpoint = url.includes('/login') || url.includes('/register');
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       originalRequest._retry = true;
-      localStorage.removeItem("item_mgmt_token");
-      localStorage.removeItem("item_mgmt_db_users");
-      window.location.href = "/login";
-      return Promise.reject(error);
+      localStorage.removeItem('item_mgmt_token');
+      localStorage.removeItem('item_mgmt_user');
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
+
+    return Promise.reject(error);
   }
 )
 
@@ -103,10 +107,15 @@ async function withFallback(apiCall, fallbackFn) {
   }
 }
 
+function persistSession(token, user) {
+  if (token) localStorage.setItem('item_mgmt_token', token);
+  if (user) localStorage.setItem('item_mgmt_user', JSON.stringify(user));
+}
+
 export const api = {
   // Authentication
   login: async (email, password) => {
-    return withFallback(
+    const result = await withFallback(
       () => axiosInstance.post('/api/v1/login', { email, password }),
       () => {
         const users = db.getUsers();
@@ -115,31 +124,31 @@ export const api = {
           throw new Error('Email/Username atau password salah.');
         }
         const token = `mock-jwt-token-${user.id}-${Date.now()}`;
-        localStorage.setItem('item_mgmt_token', token);
-        localStorage.setItem('item_mgmt_user', JSON.stringify({ id: user.id, email: user.email }));
-        return { token, user: { id: user.id, email: user.email } };
+        return { status: 'success', data: { token, user: { id: user.id, email: user.email } }, message: 'User logged in' };
       }
     );
+    persistSession(result?.data?.token, result?.data?.user);
+    return result;
   },
 
   register: async (name, email, password, password_confirmation) => {
-    return withFallback(
+    const result = await withFallback(
       () => axiosInstance.post('/api/v1/register', { name, email, password, password_confirmation }),
       () => {
         const users = db.getUsers();
         if (users.some(u => u.email === email)) {
           throw new Error('Email sudah terdaftar.');
         }
-        const newUser = { id: `u_${Date.now()}`, name, email, password, password_confirmation };
+        const newUser = { id: `u_${Date.now()}`, name, email, password };
         users.push(newUser);
         db.setUsers(users);
 
         const token = `mock-jwt-token-${newUser.id}-${Date.now()}`;
-        localStorage.setItem('item_mgmt_token', token);
-        localStorage.setItem('item_mgmt_user', JSON.stringify({ id: newUser.id, name: newUser.name, email: newUser.email }));
-        return { token, user: { id: newUser.id, name: newUser.name, email: newUser.email } };
+        return { status: 'success', data: { token, user: { id: newUser.id, name: newUser.name, email: newUser.email } }, message: 'User registered' };
       }
     );
+    persistSession(result?.data?.token, result?.data?.user);
+    return result;
   },
 
   getCurrentUser: () => {
@@ -162,11 +171,7 @@ export const api = {
 
   // Categories CRUD
   getCategories: async () => {
-    return axiosInstance.get('/api/v1/categories')
-    return withFallback(
-      () => axiosInstance.get('/api/v1/categories'),
-      () => db.getCategories()
-    );
+    return axiosInstance.get('/api/v1/categories');
   },
 
   createCategory: async (categoryName) => {
@@ -225,11 +230,7 @@ export const api = {
 
   // Items CRUD
   getItems: async () => {
-    return axiosInstance.get('/api/v1/items')
-    return withFallback(
-      () => axiosInstance.get('/api/v1/items'),
-      () => db.getItems()
-    );
+    return axiosInstance.get('/api/v1/items');
   },
 
   createItem: async (itemData) => {

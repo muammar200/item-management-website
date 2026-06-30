@@ -68,18 +68,19 @@ export default function AuthPage({ isLogin, onAuthSuccess, showToast }) {
 
     setIsLoading(true);
     try {
-      if (isLogin) {
-        const response = await api.login(email.trim(), password);
-        showToast('Login berhasil! Selamat datang kembali.', 'success');
-        localStorage.setItem('item_mgmt_token', response.data.token);
-        onAuthSuccess(response.data.user, true);
-      } else {
-        const response = await api.register(name.trim(), email.trim(), password, passwordConfirmation);
-        showToast('Registrasi berhasil! Akun Anda telah dibuat.', 'success');
-        onAuthSuccess(response.data.user, false);
-      }
+      const response = isLogin
+        ? await api.login(email.trim(), password)
+        : await api.register(name.trim(), email.trim(), password, passwordConfirmation);
+
+      showToast(
+        isLogin ? 'Login berhasil! Selamat datang kembali.' : 'Registrasi berhasil! Akun Anda telah dibuat.',
+        'success'
+      );
+      onAuthSuccess(response.data.user);
     } catch (err) {
-      const errMsg = err.message || 'Terjadi kesalahan sistem.';
+      // `withFallback` throws either the Laravel error body `{ message, errors }` or a plain Error
+      const firstValidationMessage = err?.errors && Object.values(err.errors).flat()[0];
+      const errMsg = firstValidationMessage || err?.message || 'Terjadi kesalahan sistem.';
       setApiError(errMsg);
       showToast(errMsg, 'error');
     } finally {

@@ -11,7 +11,7 @@ import UsersPage from './components/UsersPage';
 import Toast from './components/Toast';
 
 export default function App() {
-  const [user, setUser] = useState(localStorage.getItem('item_mgmt_db_users'));
+  const [user, setUser] = useState(() => api.getCurrentUser());
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -23,14 +23,6 @@ export default function App() {
 
   // Toast notifications state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' });
-
-  // Load user session on initial render
-  useEffect(() => {
-    const currentUser = api.getCurrentUser();
-    if (currentUser) {
-      setUser(currentUser);
-    }
-  }, []);
 
   // Fetch items and categories if logged in
   const fetchData = async () => {
@@ -64,12 +56,10 @@ export default function App() {
     setToast((prev) => ({ ...prev, show: false }));
   };
 
-  // Auth Success Handler
-  const handleAuthSuccess = (loggedUser, isLogin) => {
-    if (isLogin) {
-      navigate('/dashboard', { replace: true });
-    }
+  // Auth Success Handler (login or register)
+  const handleAuthSuccess = (loggedUser) => {
     setUser(loggedUser);
+    navigate('/dashboard', { replace: true });
   };
 
   // Logout Handler
@@ -172,27 +162,39 @@ export default function App() {
       )}
 
       <Routes>
-        {/* Public Routes */}
+        {/* Public Routes — redirect away if already logged in */}
         <Route
           path="/login"
-          element={<AuthPage key="login" isLogin={true} onAuthSuccess={handleAuthSuccess} showToast={showToast} />}
+          element={
+            user
+              ? <Navigate to="/dashboard" replace />
+              : <AuthPage key="login" isLogin={true} onAuthSuccess={handleAuthSuccess} showToast={showToast} />
+          }
         />
         <Route
           path="/register"
-          element={<AuthPage key="register" isLogin={false} onAuthSuccess={handleAuthSuccess} showToast={showToast} />}
+          element={
+            user
+              ? <Navigate to="/dashboard" replace />
+              : <AuthPage key="register" isLogin={false} onAuthSuccess={handleAuthSuccess} showToast={showToast} />
+          }
         />
 
         {/* Protected Routes inside Layout */}
         <Route
           path="/"
           element={
-            <Layout
-              user={user}
-              sidebarOpen={sidebarOpen}
-              setSidebarOpen={setSidebarOpen}
-              handleLogout={handleLogout}
-              pageTitle={getPageTitle()}
-            />
+            user ? (
+              <Layout
+                user={user}
+                sidebarOpen={sidebarOpen}
+                setSidebarOpen={setSidebarOpen}
+                handleLogout={handleLogout}
+                pageTitle={getPageTitle()}
+              />
+            ) : (
+              <Navigate to="/login" replace />
+            )
           }
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
